@@ -204,9 +204,18 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         }else if(!self.error) {
             // move file to final position and capture error
             @synchronized(self) {
-                [[NSFileManager new] moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
+                NSFileManager *fileManager = [NSFileManager new];
+                [fileManager moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
                 if (localError) {
-                    _fileError = localError;
+                    if(localError.code == NSFileWriteFileExistsError){
+                        //try to remove file and write again
+                        localError = nil;
+                        [fileManager removeItemAtPath:_targetPath error:&localError];                        
+                        [fileManager moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
+                    }
+                    if (localError) {
+                        _fileError = localError;
+                    }
                 }
             }
         }
